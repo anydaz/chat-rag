@@ -127,6 +127,9 @@ Health check endpoint to verify the server is running.
 ├── .env                # Environment variables (create with your API key)
 ├── .gitignore          # Git ignore rules
 ├── README.md           # This file
+├── data/
+│   ├── .gitignore      # Ignore PDF files in git
+│   └── pdfs/           # PDF files for RAG (add your PDFs here)
 └── src/
     ├── __init__.py
     ├── main.py         # FastAPI application entry point
