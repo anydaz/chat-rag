@@ -1,2 +1,4 @@
 *.pdf
 *.PDF
+chroma/
+.gitkeep

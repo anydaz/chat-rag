@@ -11,6 +11,9 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "langchain-openai>=1.2.1",
+    "chromadb>=0.3.21",
+    "pypdf>=3.0.0",
+    "langchain-text-splitters>=0.0.1",
 ]
 
 [tool.uv]
