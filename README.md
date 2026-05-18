@@ -34,9 +34,48 @@ The server will start at `http://localhost:8000`
 
 ## API Endpoints
 
-### POST /chat
+### POST /chat (Streaming)
 
-Send a message to the chat endpoint and receive a response from OpenAI.
+Send a message to the chat endpoint and receive a **streamed response** from OpenAI. This provides better UX for chatbots as the response appears incrementally.
+
+**Request:**
+
+```json
+{
+  "message": "Hello, what is 2+2?"
+}
+```
+
+**Response:** Streamed text chunks (Server-Sent Events format)
+
+Using curl with streaming:
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, what is 2+2?"}' \
+  -N  # Disable buffering to see streaming response
+```
+
+Using Python:
+
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/chat",
+    json={"message": "Hello, what is 2+2?"},
+    stream=True,
+)
+
+for chunk in response.iter_content(decode_unicode=True):
+    if chunk:
+        print(chunk, end="", flush=True)
+```
+
+### POST /chat/non-stream (Non-Streaming)
+
+Send a message and get the complete response at once (original behavior).
 
 **Request:**
 
@@ -53,6 +92,14 @@ Send a message to the chat endpoint and receive a response from OpenAI.
   "message": "Hello, what is 2+2?",
   "response": "2 + 2 equals 4."
 }
+```
+
+Using curl:
+
+```bash
+curl -X POST http://localhost:8000/chat/non-stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, what is 2+2?"}'
 ```
 
 ### GET /health

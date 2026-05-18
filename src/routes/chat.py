@@ -2,13 +2,19 @@
 
 from pydantic import BaseModel
 from fastapi import APIRouter
-from ..graph import create_chat_graph
+from fastapi.responses import StreamingResponse
+from langchain_openai import ChatOpenAI
+import os
 
 # Initialize router
 router = APIRouter()
 
-# Initialize the chat graph
-chat_graph = create_chat_graph()
+# Initialize streaming chat model
+chat_model = ChatOpenAI(
+    model="gpt-3.5-turbo",
+    api_key=os.getenv("OPENAI_API_KEY"),
+    streaming=True,
+)
 
 
 class ChatRequest(BaseModel):
@@ -22,11 +28,32 @@ class ChatResponse(BaseModel):
     response: str
 
 
+async def stream_chat_response(message: str):
+    """Stream chat response from OpenAI."""
+    try:
+        # Use streaming to get chunks of the response
+        for chunk in chat_model.stream(message):
+            if chunk.content:
+                yield chunk.content
+    except Exception as e:
+        yield f"Error: {str(e)}"
+
+
 @router.post("/chat")
-async def chat(request: ChatRequest) -> ChatResponse:
-    """Simple chat endpoint that calls OpenAI."""
-    result = chat_graph.invoke({"message": request.message, "response": ""})
-    return ChatResponse(message=request.message, response=result["response"])
+async def chat(request: ChatRequest) -> StreamingResponse:
+    """Stream chat endpoint that calls OpenAI."""
+    return StreamingResponse(
+        stream_chat_response(request.message),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@router.post("/chat/non-stream")
+async def chat_non_stream(request: ChatRequest) -> ChatResponse:
+    """Non-streaming chat endpoint (returns full response at once)."""
+    result = chat_model.invoke(request.message)
+    return ChatResponse(message=request.message, response=result.content)
 
 
 @router.get("/health")
