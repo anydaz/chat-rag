@@ -3,23 +3,14 @@
 from pydantic import BaseModel
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from langchain_openai import ChatOpenAI
-from ..rag import retrieve_context
 from ..graph import create_chat_graph
-import os
+import asyncio
 
 # Initialize router
 router = APIRouter()
 
-# Initialize the chat graph (which handles RAG + chat logic)
+# Initialize the chat graph (which handles RAG + guardrails + chat logic)
 chat_graph = create_chat_graph()
-
-# Also initialize streaming chat model for direct streaming
-chat_model = ChatOpenAI(
-    model="gpt-3.5-turbo",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    streaming=True,
-)
 
 
 class ChatRequest(BaseModel):
@@ -34,38 +25,30 @@ class ChatResponse(BaseModel):
     context: str
 
 
-async def stream_chat_response(message: str, context: str):
-    """Stream chat response from OpenAI with RAG context."""
+async def stream_chat_response(message: str):
+    """Stream chat response from graph with guardrails + RAG."""
     try:
-        # Build prompt with context (same as graph)
-        if context:
-            prompt = f"""You are a chatbot representing Andy Darmawan. Your role is to answer professional queries about Andy based on the provided information. Be helpful, professional, and accurate.
-
-Relevant Information:
-{context}
-
-Question: {message}
-
-Answer:"""
-        else:
-            prompt = message
+        # Use graph to get response (handles guardrails + retrieval + chat)
+        result = chat_graph.invoke({
+            "message": message,
+            "response": "",
+            "context": ""
+        })
         
-        # Stream response using chat model
-        for chunk in chat_model.stream(prompt):
-            if chunk.content:
-                yield chunk.content
+        # Stream response character by character
+        response_text = result.get("response", "")
+        for char in response_text:
+            yield char
+            await asyncio.sleep(0)  # Yield control to allow streaming
     except Exception as e:
         yield f"Error: {str(e)}"
 
 
 @router.post("/chat")
 async def chat(request: ChatRequest) -> StreamingResponse:
-    """Stream chat endpoint with RAG retrieval."""
-    # Retrieve relevant context
-    context = retrieve_context(request.message, top_k=3)
-    
+    """Stream chat endpoint with guardrails + RAG retrieval."""
     async def generate():
-        async for chunk in stream_chat_response(request.message, context):
+        async for chunk in stream_chat_response(request.message):
             yield chunk
     
     return StreamingResponse(
@@ -79,7 +62,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 async def chat_non_stream(request: ChatRequest) -> ChatResponse:
     """Non-streaming chat endpoint with RAG retrieval."""
     # Use the graph to get response with RAG
-    result = chat_graph({
+    result = chat_graph.invoke({
         "message": request.message,
         "response": "",
         "context": ""
