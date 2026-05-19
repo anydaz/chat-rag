@@ -49,23 +49,22 @@ def initialize_chroma():
 
 
 def load_documents_to_chroma(pdf_dir: str = "data/pdfs"):
-    """Load PDFs and store embeddings in Chroma."""
+    """Load PDFs and store embeddings in Chroma. Checks for new PDFs each time."""
     print(f"\n=== Loading Documents to Chroma ===")
     print(f"PDF Directory: {pdf_dir}")
     
     client, embeddings = initialize_chroma()
     
-    # Check if collection already exists
+    # Delete existing collection if it exists to start fresh
     try:
-        collection = client.get_collection(name="documents")
-        existing_count = collection.count()
-        print(f"Using existing Chroma collection with {existing_count} documents")
-        if existing_count > 0:
-            print("=== End Document Loading ===\n")
-            return collection
+        client.delete_collection(name="documents")
+        print("Cleared existing collection")
     except:
-        print("Creating new Chroma collection")
-        collection = client.create_collection(name="documents")
+        pass  # Collection doesn't exist yet, which is fine
+    
+    # Create fresh collection
+    collection = client.create_collection(name="documents")
+    print("Created new Chroma collection")
     
     # Load and split documents
     text = load_pdfs_from_directory(pdf_dir)
