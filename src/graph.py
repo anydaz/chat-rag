@@ -39,24 +39,25 @@ def create_chat_graph():
         print(f"Warning: Could not load documents to Chroma: {e}")
     
     def guardrails_node(state: ChatState) -> ChatState:
-        """Check if the question is relevant to Andy Darmawan's profile."""
-        guardrails_prompt = f"""You are a gatekeeping AI for a professional chatbot representing Andy Darmawan.
-Your role is to determine if a user's question is relevant to Andy's professional profile and experience.
+        """Check if the question is relevant to a professional profile."""
+        guardrails_prompt = f"""You are a gatekeeping AI for a professional chatbot representing a person. 
+Your role is to determine if a user's question is relevant to that person's professional profile and experience.
 
 Questions are RELEVANT if they ask about:
-- Andy's skills, experience, or background
-- Andy's professional accomplishments
-- Andy's education or certifications
-- Andy's availability or contact information
+- who the person is and what they do
+- skills, experience, or background
+- professional accomplishments
+- education or certifications
+- availability or contact information
 - Technical expertise or projects
 - Anything related to professional services
+- work history or previous roles
 
 Questions are NOT RELEVANT if they ask about:
-- General knowledge unrelated to Andy
-- Personal topics (hobbies, politics, etc.)
+- General knowledge unrelated to the person's profile
 - Other people's information
 - Inappropriate or harmful content
-- Random chitchat
+- Topics completely unrelated to the person's professional profile
 
 User Question: "{state['message']}"
 
@@ -89,7 +90,7 @@ Your question falls outside my scope. If you have any questions about Andy's pro
         
         # Build prompt with context
         if state["context"]:
-            prompt = f"""You are a chatbot representing Andy Darmawan. Your role is to answer professional queries about Andy based on the provided information. Be helpful, professional, and accurate.
+            prompt = f"""You are a chatbot representing Andy Darmawan answer like you are Andy Darmawan. Your role is to answer professional queries about Andy based on the provided information. Be helpful, professional, and accurate.
 
 Relevant Information:
 {state["context"]}
