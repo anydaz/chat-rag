@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from ..graph import create_chat_graph
 import asyncio
+import io
 
 # Initialize router
 router = APIRouter()
@@ -94,4 +95,20 @@ async def chat_non_stream(request: ChatRequest) -> ChatResponse:
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@router.get("/graph/visualize")
+async def visualize_graph():
+    """Return graph visualization as PNG image."""
+    try:
+        # Get the graph visualization as PNG
+        png_data = chat_graph.get_graph().draw_mermaid_png()
+        
+        return StreamingResponse(
+            io.BytesIO(png_data),
+            media_type="image/png",
+            headers={"Content-Disposition": "inline; filename=graph.png"}
+        )
+    except Exception as e:
+        return {"error": f"Could not visualize graph: {str(e)}"}
 
