@@ -16,6 +16,7 @@ chat_graph = create_chat_graph()
 class ChatRequest(BaseModel):
     """Request body for chat endpoint."""
     message: str
+    session_id: str = None  # Optional session ID for conversation memory
 
 
 class ChatResponse(BaseModel):
@@ -23,17 +24,24 @@ class ChatResponse(BaseModel):
     message: str
     response: str
     context: str
+    session_id: str  # Session ID for conversation tracking
 
 
-async def stream_chat_response(message: str):
+async def stream_chat_response(message: str, session_id: str):
     """Stream chat response from graph with guardrails + RAG."""
     try:
         # Use graph to get response (handles guardrails + retrieval + chat)
-        result = chat_graph.invoke({
-            "message": message,
-            "response": "",
-            "context": ""
-        })
+        # Pass thread_id via config for conversation memory
+        # Don't pass conversation_history - let MemorySaver restore it!
+        result = chat_graph.invoke(
+            {
+                "message": message,
+                "response": "",
+                "context": "",
+                "is_valid": False
+            },
+            config={"configurable": {"thread_id": session_id}}
+        )
         
         # Stream response character by character
         response_text = result.get("response", "")
@@ -48,7 +56,7 @@ async def stream_chat_response(message: str):
 async def chat(request: ChatRequest) -> StreamingResponse:
     """Stream chat endpoint with guardrails + RAG retrieval."""
     async def generate():
-        async for chunk in stream_chat_response(request.message):
+        async for chunk in stream_chat_response(request.message, request.session_id):
             yield chunk
     
     return StreamingResponse(
@@ -62,16 +70,23 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 async def chat_non_stream(request: ChatRequest) -> ChatResponse:
     """Non-streaming chat endpoint with RAG retrieval."""
     # Use the graph to get response with RAG
-    result = chat_graph.invoke({
-        "message": request.message,
-        "response": "",
-        "context": ""
-    })
+    # Pass thread_id via config for conversation memory
+    # Don't pass conversation_history - let MemorySaver restore it!
+    result = chat_graph.invoke(
+        {
+            "message": request.message,
+            "response": "",
+            "context": "",
+            "is_valid": False
+        },
+        config={"configurable": {"thread_id": request.session_id}}
+    )
     
     return ChatResponse(
         message=request.message,
         response=result["response"],
-        context=result["context"]
+        context=result["context"],
+        session_id=request.session_id
     )
 
 

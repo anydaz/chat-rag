@@ -1,7 +1,8 @@
 """LangGraph definition for chat with RAG."""
 
-from typing import TypedDict
+from typing import TypedDict, List
 from langgraph.graph import StateGraph
+from langgraph.checkpoint.memory import MemorySaver
 from langchain_openai import ChatOpenAI
 from .rag import retrieve_context, load_documents_to_chroma
 import os
@@ -13,6 +14,13 @@ class ChatState(TypedDict):
     response: str
     context: str
     is_valid: bool  # Whether the question passed guardrails
+    conversation_history: List[dict]  # List of {role: user/assistant, content: text}
+
+
+# Optional fields with total=False extension
+class ChatStateOptional(TypedDict, total=False):
+    """Optional fields for ChatState."""
+    pass
 
 
 def create_chat_graph():
@@ -40,8 +48,18 @@ def create_chat_graph():
     
     def guardrails_node(state: ChatState) -> ChatState:
         """Check if the question is relevant to a professional profile."""
+        # Build conversation context
+        history_text = ""
+        if state.get("conversation_history"):
+            history_text = "Conversation History:\n"
+            for msg in state["conversation_history"][-4:]:  # Last 4 messages for context
+                history_text += f"- {msg['role']}: {msg['content']}\n"
+            history_text += "\n"
+        
         guardrails_prompt = f"""You are a gatekeeping AI for a professional chatbot representing a person. 
 Your role is to determine if a user's question is relevant to that person's professional profile and experience.
+
+{history_text}
 
 Questions are RELEVANT if they ask about:
 - who the person is and what they do
@@ -52,6 +70,7 @@ Questions are RELEVANT if they ask about:
 - Technical expertise or projects
 - Anything related to professional services
 - work history or previous roles
+- Follow-ups to previous valid questions about the person's profile
 
 Questions are NOT RELEVANT if they ask about:
 - General knowledge unrelated to the person's profile
@@ -59,7 +78,7 @@ Questions are NOT RELEVANT if they ask about:
 - Inappropriate or harmful content
 - Topics completely unrelated to the person's professional profile
 
-User Question: "{state['message']}"
+Current User Question: "{state['message']}"
 
 Respond with ONLY "VALID" or "INVALID" - nothing else."""
         
@@ -81,11 +100,18 @@ Respond with ONLY "VALID" or "INVALID" - nothing else."""
     
     def chat_node(state: ChatState) -> ChatState:
         """Call OpenAI with the user message and context."""
+        # Initialize conversation history if not present
+        if "conversation_history" not in state:
+            state["conversation_history"] = []
+        
         # If question failed guardrails, return rejection message
         if not state["is_valid"]:
             state["response"] = """I appreciate your question, but I'm specifically designed to answer professional queries about Andy Darmawan's experience, skills, and background. 
 
 Your question falls outside my scope. If you have any questions about Andy's professional profile, I'd be happy to help!"""
+            # Still record the failed message in history
+            state["conversation_history"].append({"role": "user", "content": state["message"]})
+            state["conversation_history"].append({"role": "assistant", "content": state["response"]})
             return state
         
         # Build prompt with context
@@ -103,6 +129,11 @@ Answer:"""
         
         result = chat_model.invoke(prompt)
         state["response"] = result.content
+        
+        # Record conversation in history
+        state["conversation_history"].append({"role": "user", "content": state["message"]})
+        state["conversation_history"].append({"role": "assistant", "content": state["response"]})
+        
         return state
     
     def should_retrieve(state: ChatState) -> str:
@@ -136,6 +167,7 @@ Answer:"""
     # Chat is the final node
     graph.set_finish_point("chat")
     
-    # Compile and return
-    return graph.compile()
+    # Compile with memory checkpointer for conversation history
+    checkpointer = MemorySaver()
+    return graph.compile(checkpointer=checkpointer)
 
