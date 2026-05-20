@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .routes.chat import router as chat_router
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
@@ -16,6 +17,15 @@ print(f"OpenAI API Key loaded successfully")
 
 # Initialize FastAPI app
 app = FastAPI(title="RAG Chat API", version="0.1.0")
+
+# Configure CORS for localhost
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include routers
 app.include_router(chat_router)
