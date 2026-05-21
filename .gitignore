@@ -26,3 +26,7 @@ env/
 .vscode/
 .idea/
 .DS_Store
+
+# Google Calendar authentication (sensitive)
+credentials.json
+token.json

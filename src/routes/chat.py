@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from ..graph import create_chat_graph
+from ..tools.calendar import get_calendar_tools
 import asyncio
 import io
 
@@ -95,6 +96,31 @@ async def chat_non_stream(request: ChatRequest) -> ChatResponse:
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@router.get("/tools/calendar")
+async def list_calendar_tools():
+    """List available Google Calendar tools."""
+    try:
+        tools = get_calendar_tools()
+        tools_info = [
+            {
+                "name": tool.name,
+                "description": tool.description,
+            }
+            for tool in tools
+        ]
+        return {
+            "status": "success",
+            "tools": tools_info,
+            "count": len(tools_info)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "tools": []
+        }
 
 
 @router.get("/graph/visualize")
