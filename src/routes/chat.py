@@ -53,6 +53,11 @@ async def stream_chat_response(message: str, session_id: str):
     except Exception as e:
         yield f"Error: {str(e)}"
 
+# print Hello world to verify the route is loaded
+@router.get("/")
+async def hello():
+    return {"message": "Hello, world!"}
+
 
 @router.post("/chat")
 async def chat(request: ChatRequest) -> StreamingResponse:
