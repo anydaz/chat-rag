@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 # Load environment variables BEFORE any other imports
 load_dotenv()
@@ -17,6 +18,12 @@ print(f"OpenAI API Key loaded successfully")
 
 # Initialize FastAPI app
 app = FastAPI(title="RAG Chat API", version="0.1.0")
+
+# Add middleware for trusted hosts (optional, can be configured as needed)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]
+)
 
 # Configure CORS for localhost
 app.add_middleware(
