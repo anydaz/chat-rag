@@ -17,7 +17,7 @@ if not openai_api_key:
 print(f"OpenAI API Key loaded successfully")
 
 # Initialize FastAPI app
-app = FastAPI(title="RAG Chat API", version="0.1.0")
+app = FastAPI(title="RAG Chat API", version="0.1.0", root_path="/api")
 
 # Add middleware for trusted hosts (optional, can be configured as needed)
 app.add_middleware(
