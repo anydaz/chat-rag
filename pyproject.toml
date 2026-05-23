@@ -17,6 +17,7 @@ dependencies = [
     "langsmith>=0.0.1",
     "python-docx>=0.8.11",
     "langchain-google-community[calendar]>=0.1.0",
+    "python-multipart>=0.0.6",
 ]
 
 [tool.uv]
