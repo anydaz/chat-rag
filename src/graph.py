@@ -4,7 +4,7 @@ from typing import TypedDict, List
 from langgraph.graph import StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_openai import ChatOpenAI
-from .rag import retrieve_context, load_documents_to_chroma
+from .rag import retrieve_context
 import os
 
 
@@ -39,12 +39,6 @@ def create_chat_graph():
         api_key=os.getenv("OPENAI_API_KEY"),
         temperature=0,  # Lower temperature for consistent guardrail decisions
     )
-    
-    # Load documents to Chroma on initialization
-    try:
-        load_documents_to_chroma()
-    except Exception as e:
-        print(f"Warning: Could not load documents to Chroma: {e}")
     
     def guardrails_node(state: ChatState) -> ChatState:
         """Check if the question is relevant to a professional profile."""
