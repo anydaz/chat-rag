@@ -8,6 +8,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes.chat import router as chat_router
+from .routes.upload import router as upload_router
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(upload_router)
 app.include_router(chat_router)
 
 
