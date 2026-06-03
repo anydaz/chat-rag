@@ -3354,6 +3354,9 @@ source = { virtual = "." }
 dependencies = [
     { name = "chromadb" },
     { name = "fastapi" },
+    { name = "google-auth" },
+    { name = "google-auth-httplib2" },
+    { name = "google-auth-oauthlib" },
     { name = "langchain" },
     { name = "langchain-google-community", extra = ["calendar"] },
     { name = "langchain-openai" },
@@ -3379,6 +3382,9 @@ dev = [
 requires-dist = [
     { name = "chromadb", specifier = ">=0.3.21" },
     { name = "fastapi", specifier = ">=0.100.0" },
+    { name = "google-auth", specifier = ">=2.0.0" },
+    { name = "google-auth-httplib2", specifier = ">=0.1.0" },
+    { name = "google-auth-oauthlib", specifier = ">=1.0.0" },
     { name = "langchain", specifier = ">=0.1.0" },
     { name = "langchain-google-community", extras = ["calendar"], specifier = ">=0.1.0" },
     { name = "langchain-openai", specifier = ">=1.2.1" },
