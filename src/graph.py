@@ -10,6 +10,7 @@ import os
 from .nodes import (
     guardrails_node,
     detect_calendar_intent,
+    validate_calendar_event,
     retrieve_node,
     calendar_node,
     chat_node,
@@ -25,6 +26,7 @@ class ChatState(TypedDict):
     conversation_history: List[dict]
     calendar_action: Optional[str]
     calendar_result: Optional[str]
+    calendar_data: Optional[dict]  # Structured calendar data: {event_title, date_time, timezone, email_address}
 
 
 def create_chat_graph():
@@ -32,7 +34,7 @@ def create_chat_graph():
     
     # Initialize models
     guardrails_model = ChatOpenAI(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         api_key=os.getenv("OPENAI_API_KEY"),
         temperature=0,
     )
@@ -46,7 +48,7 @@ def create_chat_graph():
     
     def should_calendar_or_guardrails(state: ChatState) -> str:
         """Router: Calendar agent or guardrails + retrieval."""
-        return "calendar" if state.get("calendar_action") == "CREATE" else "guardrails"
+        return "validate_calendar" if state.get("calendar_action") == "CREATE" else "guardrails"
     
     def should_retrieve(state: ChatState) -> str:
         """Router: Determine if question passed guardrails."""
@@ -57,6 +59,7 @@ def create_chat_graph():
     
     # Add nodes
     graph.add_node("detect_calendar", calendar_intent_wrapper)
+    graph.add_node("validate_calendar", validate_calendar_event)
     graph.add_node("guardrails", guardrails_wrapper)
     graph.add_node("retrieve", retrieve_node)
     graph.add_node("calendar", calendar_node)
@@ -65,13 +68,23 @@ def create_chat_graph():
     # Set entry point - detect calendar first
     graph.set_entry_point("detect_calendar")
     
-    # From detect_calendar, route to calendar agent or guardrails
+    # From detect_calendar, route to validate_calendar (if calendar) or guardrails (if not)
     graph.add_conditional_edges(
         "detect_calendar",
         should_calendar_or_guardrails,
         {
-            "calendar": "calendar",
+            "validate_calendar": "validate_calendar",
             "guardrails": "guardrails"
+        }
+    )
+    
+    # From validate_calendar, route to calendar or chat based on is_valid flag
+    graph.add_conditional_edges(
+        "validate_calendar",
+        lambda state: "calendar" if state.get("is_valid") else "respond",
+        {
+            "calendar": "calendar",
+            "respond": "chat"
         }
     )
     

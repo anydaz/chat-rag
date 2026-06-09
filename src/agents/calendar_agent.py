@@ -8,24 +8,26 @@ import os
 
 
 def create_calendar_agent():
-    """Create a ReAct agent for calendar operations."""
+    """Create a ReAct agent for calendar operations with field validation."""
     
-    # Initialize LLM with system prompt bound
+    # Initialize LLM with strict temperature for consistent behavior
     llm = ChatOpenAI(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         api_key=os.getenv("OPENAI_API_KEY"),
         temperature=0
     )
     
-    # Bind system prompt to the model
-    llm_with_system = llm.bind_tools([], system_prompt=CALENDAR_SYSTEM_PROMPT) if hasattr(llm, 'bind_tools') else llm
+    # Bind system prompt to enforce field requirements
+    llm_with_system = llm.bind(
+        system_prompt=CALENDAR_SYSTEM_PROMPT
+    )
     
     # Get calendar tools
     tools = get_calendar_tools()
     
     # Create ReAct agent using LangGraph
     agent = create_react_agent(
-        model=llm,
+        model=llm_with_system,
         tools=tools
     )
     
